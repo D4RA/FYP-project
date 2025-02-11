@@ -1,47 +1,67 @@
+import random
 import numpy as np
-import matplotlib.pyplot as plt
 
-# Utility function to calculate the Euclidean distance matrix between nodes
-def calculate_distance_matrix(nodes):
-    num_nodes = len(nodes)
-    distance_matrix = np.zeros((num_nodes, num_nodes))
-    for i in range(num_nodes):
-        for j in range(num_nodes):
-            distance_matrix[i][j] = np.linalg.norm(np.array(nodes[i]) - np.array(nodes[j]))
-    return distance_matrix
+def generate_random_nodes(num_nodes):
+    return [(random.uniform(0, 100), random.uniform(0, 100)) for _ in range(num_nodes)]
 
-# Utility function to generate random coordinates for nodes
-def generate_random_nodes(num_nodes, x_range=(0, 100), y_range=(0, 100)):
-    nodes = [(np.random.uniform(*x_range), np.random.uniform(*y_range)) for _ in range(num_nodes)]
-    return nodes
+def initialise_pheremones(num_nodes, InitialPheremone):
+    return np.full((num_nodes, num_nodes), InitialPheremone)
 
-# Utility function to plot a TSP solution
-def plot_tsp_solution(nodes, solution, title="TSP Solution"):
-    plt.figure(figsize=(8, 6))
+def calculate_probabilities(pheremones, heuristics, alpha, beta, current_node, visited):
+    total = 0
+    probabilities = []
+    for j in range(len(pheremones)):
+        if j not in visited:
+            value = (pheremones[current_node][j] ** alpha) * (heuristics[current_node][j] ** beta)
+            probabilities.append((j, value))
+            total += value
+    probabilities = [(node, prob / total) for node, prob in probabilities]
+    return probabilities
 
-    # Extract the coordinates of the nodes
-    x = [nodes[i][0] for i in solution]
-    y = [nodes[i][1] for i in solution]
+def select_next_node(probabilities):
+    rand = random.random()
+    cum = 0
+    for node, prob in probabilities:
+        cum += prob
+        if rand <= cum:
+            return node
+    return probabilities[-1][0]
 
-    # Plot the nodes
-    plt.scatter(x, y, c="red", s=50, label="Nodes")
-    for i, (x_coord, y_coord) in enumerate(nodes):
-        plt.text(x_coord, y_coord, f"{i}", fontsize=10, ha="right")
+def evaluate_solution(solution, cost_matrix):
+    return sum(cost_matrix[solution[i]][solution[i + 1]] for i in range(len(solution) - 1))
 
-    # Plot the solution path
-    plt.plot(x, y, c="blue", linestyle="--", label="Path")
+def evaporate_pheremones(pheremones, evap_rate):
+    return pheremones * (1 - evap_rate)
 
-    # Customize the plot
-    plt.title(title)
-    plt.xlabel("X-coordinate")
-    plt.ylabel("Y-coordinate")
-    plt.legend()
-    plt.grid(True)
-    plt.show()
+def deposit(pheremones, solutions, costs, constant):
+    for k, path in enumerate(solutions):
+        cost = costs[k]
+        for i in range(len(path) - 1):
+            pheremones[path[i]][path[i + 1]] += constant / cost
+            pheremones[path[i + 1]][path[i]] += constant / cost
+    return pheremones
 
-# Utility function to print the results
-def print_results(algorithm_name, best_solution, best_cost):
-    print(f"{algorithm_name} Results:")
-    print("Best solution:", best_solution)
-    print("Best cost:", best_cost)
-    print("-" * 40)
+def ant_colony_optimization(cost_matrix, alpha, beta, InitialPheremone, evap_rate, m, constant, I_max):
+    num_nodes = len(cost_matrix)
+    pheromones = initialise_pheremones(num_nodes, InitialPheremone)
+    heuristics = 1 / (cost_matrix + 1e-10)
+
+    best_solution, best_cost = None, float('inf')
+    for _ in range(I_max):
+        solutions, costs = [], []
+        for _ in range(m):
+            solution = [random.randint(0, num_nodes - 1)]
+            while len(solution) < num_nodes:
+                probabilities = calculate_probabilities(pheromones, heuristics, alpha, beta, solution[-1], solution)
+                solution.append(select_next_node(probabilities))
+            solution.append(solution[0])
+            solutions.append(solution)
+            costs.append(evaluate_solution(solution, cost_matrix))
+
+        best_idx = np.argmin(costs)
+        best_solution, best_cost = solutions[best_idx], costs[best_idx]
+
+        pheromones = evaporate_pheremones(pheromones, evap_rate)
+        pheromones = deposit(pheromones, solutions, costs, constant)
+
+    return best_solution, best_cost
