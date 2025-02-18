@@ -1,142 +1,183 @@
 import sys
-import random
 import numpy as np
-import matplotlib.pyplot as plt
-
-from PyQt5.QtWidgets import QApplication, QMainWindow, QLabel, QVBoxLayout, QWidget, QPushButton, QFormLayout, QLineEdit
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QComboBox, QLabel, QLineEdit, QFrame
+from PyQt5.QtCore import Qt
+from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-
-# Import ACO functions from utils.py
-from Utils import ant_colony_optimization, generate_random_nodes
-
-
-class ACOThread(QThread):
-    update_signal = pyqtSignal(object, object, float)
-
-    def __init__(self, num_nodes, alpha, beta, InitialPheremone, evap_rate, m, constant, I_max):
-        super().__init__()
-        self.num_nodes = num_nodes
-        self.alpha = alpha
-        self.beta = beta
-        self.InitialPheremone = InitialPheremone
-        self.evap_rate = evap_rate
-        self.m = m
-        self.constant = constant
-        self.I_max = I_max
-
-    def run(self):
-        # Generate nodes and cost matrix
-        nodes = generate_random_nodes(self.num_nodes)
-        cost_matrix = np.zeros((self.num_nodes, self.num_nodes))
-        for i in range(self.num_nodes):
-            for j in range(self.num_nodes):
-                cost_matrix[i][j] = np.linalg.norm(np.array(nodes[i]) - np.array(nodes[j]))
-
-        # Run ACO algorithm
-        best_solution, best_cost = ant_colony_optimization(
-            cost_matrix, self.alpha, self.beta, self.InitialPheremone, self.evap_rate, self.m, self.constant, self.I_max
-        )
-
-        # Emit results for UI update
-        self.update_signal.emit(nodes, best_solution, best_cost)
+from algorithms.ACo2 import ant_colony_optimization
+from algorithms.pso import run_tsp_pso
 
 
-class ACOApp(QMainWindow):
+class TSPApp(QWidget):
     def __init__(self):
         super().__init__()
+        self.setWindowTitle("TSP Solver")
+        self.setGeometry(100, 100, 800, 500)  # Adjusted window size
 
-        self.setWindowTitle("Ant Colony Optimization - TSP Solver")
-        self.setGeometry(100, 100, 800, 600)
+        # **Main Layout**
+        self.main_layout = QHBoxLayout(self)
 
-        # Main layout
-        self.layout = QVBoxLayout()
+        # **Sidebar (Menu) - Left Panel**
+        self.sidebar = QVBoxLayout()
+        self.sidebar.setAlignment(Qt.AlignTop)
 
-        # Input form layout
-        self.form_layout = QFormLayout()
-        self.num_nodes_input = QLineEdit("5")
+        # Algorithm Selector
+        self.algorithm_selector = QComboBox()
+        self.algorithm_selector.addItems(["Ant Colony Optimization (ACO)", "Particle Swarm Optimization (PSO)"])
+        self.algorithm_selector.currentIndexChanged.connect(self.update_ui)
+        self.sidebar.addWidget(QLabel("Select Algorithm:"))
+        self.sidebar.addWidget(self.algorithm_selector)
+
+        # Common Inputs
+        self.node_label = QLabel("Number of Nodes (Cities):")
+        self.sidebar.addWidget(self.node_label)
+        self.node_input = QLineEdit("10")
+        self.sidebar.addWidget(self.node_input)
+
+        self.iter_label = QLabel("Max Iterations:")
+        self.sidebar.addWidget(self.iter_label)
+        self.iter_input = QLineEdit("50")
+        self.sidebar.addWidget(self.iter_input)
+
+        # **ACO-Specific Inputs**
+        self.alpha_label = QLabel("Alpha (ACO):")
+        self.sidebar.addWidget(self.alpha_label)
         self.alpha_input = QLineEdit("1.0")
+        self.sidebar.addWidget(self.alpha_input)
+
+        self.beta_label = QLabel("Beta (ACO):")
+        self.sidebar.addWidget(self.beta_label)
         self.beta_input = QLineEdit("2.0")
+        self.sidebar.addWidget(self.beta_input)
+
+        self.pheromone_label = QLabel("Initial Pheromone (ACO):")
+        self.sidebar.addWidget(self.pheromone_label)
         self.pheromone_input = QLineEdit("1.0")
-        self.evap_rate_input = QLineEdit("0.5")
+        self.sidebar.addWidget(self.pheromone_input)
+
+        self.evap_label = QLabel("Evaporation Rate (ACO):")
+        self.sidebar.addWidget(self.evap_label)
+        self.evap_input = QLineEdit("0.5")
+        self.sidebar.addWidget(self.evap_input)
+
+        self.ants_label = QLabel("Number of Ants (ACO):")
+        self.sidebar.addWidget(self.ants_label)
         self.ants_input = QLineEdit("5")
+        self.sidebar.addWidget(self.ants_input)
+
+        self.deposit_label = QLabel("Deposit Constant (ACO):")
+        self.sidebar.addWidget(self.deposit_label)
         self.deposit_input = QLineEdit("100.0")
-        self.iterations_input = QLineEdit("100")
+        self.sidebar.addWidget(self.deposit_input)
 
-        self.form_layout.addRow("Number of Nodes:", self.num_nodes_input)
-        self.form_layout.addRow("Alpha:", self.alpha_input)
-        self.form_layout.addRow("Beta:", self.beta_input)
-        self.form_layout.addRow("Initial Pheromone:", self.pheromone_input)
-        self.form_layout.addRow("Evaporation Rate:", self.evap_rate_input)
-        self.form_layout.addRow("Number of Ants:", self.ants_input)
-        self.form_layout.addRow("Deposit Constant:", self.deposit_input)
-        self.form_layout.addRow("Max Iterations:", self.iterations_input)
+        # Run Button
+        self.run_button = QPushButton("Run Algorithm")
+        self.run_button.clicked.connect(self.run_algorithm)
+        self.sidebar.addWidget(self.run_button)
 
-        self.layout.addLayout(self.form_layout)
+        # Add Sidebar to Main Layout
+        self.main_layout.addLayout(self.sidebar)
 
-        # Run button
-        self.run_button = QPushButton("Run ACO")
-        self.run_button.clicked.connect(self.run_aco)
-        self.layout.addWidget(self.run_button)
+        # **Result Display Area - Center Panel**
+        self.result_area = QVBoxLayout()
+        self.result_area.setAlignment(Qt.AlignCenter)
 
-        # Matplotlib figure for plotting
-        self.figure, self.ax = plt.subplots(figsize=(5, 4))
+        # **Matplotlib Figure Canvas**
+        self.figure = Figure()
         self.canvas = FigureCanvas(self.figure)
-        self.layout.addWidget(self.canvas)
+        self.result_area.addWidget(self.canvas)
 
-        # Label to show results
-        self.result_label = QLabel("")
-        self.layout.addWidget(self.result_label)
+        # **Result Label (Below Graph)**
+        self.result_label = QLabel("Results will appear here.")
+        self.result_label.setAlignment(Qt.AlignCenter)
+        self.result_label.setFrameShape(QFrame.Box)
+        self.result_label.setStyleSheet("font-size: 14px; padding: 10px; background-color: #f0f0f0;")
+        self.result_area.addWidget(self.result_label)
 
-        # Central widget
-        self.central_widget = QWidget()
-        self.central_widget.setLayout(self.layout)
-        self.setCentralWidget(self.central_widget)
+        # Add Result Display to Main Layout
+        self.main_layout.addLayout(self.result_area)
 
-    def run_aco(self):
-        try:
-            # Get parameters from UI
-            num_nodes = int(self.num_nodes_input.text())
+        # Set Layout
+        self.setLayout(self.main_layout)
+
+        # Update UI to show/hide parameters correctly
+        self.update_ui()
+
+    def run_algorithm(self):
+        algorithm = self.algorithm_selector.currentText()
+        num_nodes = int(self.node_input.text())  # Get user-defined node count
+        max_iterations = int(self.iter_input.text())  # Get user-defined iterations
+
+        if "ACO" in algorithm:
             alpha = float(self.alpha_input.text())
             beta = float(self.beta_input.text())
-            InitialPheremone = float(self.pheromone_input.text())
-            evap_rate = float(self.evap_rate_input.text())
-            m = int(self.ants_input.text())
-            constant = float(self.deposit_input.text())
-            I_max = int(self.iterations_input.text())
+            initial_pheromone = float(self.pheromone_input.text())
+            evaporation_rate = float(self.evap_input.text())
+            num_ants = int(self.ants_input.text())
+            deposit_constant = float(self.deposit_input.text())
 
-            # Run ACO in a separate thread
-            self.aco_thread = ACOThread(num_nodes, alpha, beta, InitialPheremone, evap_rate, m, constant, I_max)
-            self.aco_thread.update_signal.connect(self.update_plot)
-            self.aco_thread.start()
+            # Generate random cost matrix
+            cost_matrix = np.random.rand(num_nodes, num_nodes) * 100
 
-        except ValueError:
-            self.result_label.setText("Error: Please enter valid numeric values.")
+            # Run ACO
+            best_solution, best_cost = ant_colony_optimization(
+                cost_matrix, alpha, beta, initial_pheromone, evaporation_rate, num_ants, deposit_constant, max_iterations
+            )
 
-    def update_plot(self, nodes, solution, cost):
-        self.ax.clear()
-        x = [nodes[i][0] for i in solution]
-        y = [nodes[i][1] for i in solution]
+            # Generate random node positions
+            nodes = np.random.rand(num_nodes, 2) * 100
+            self.plot_tsp_solution(nodes, best_solution, f"ACO Solution - Cost: {best_cost:.2f}")
+            self.result_label.setText(f"ACO Best Cost: {best_cost:.2f}")
 
-        self.ax.scatter(x, y, c="red", s=50, label="Nodes")
-        for i, (x_coord, y_coord) in enumerate(nodes):
-            self.ax.text(x_coord, y_coord, f"{i}", fontsize=10, ha="right")
+        elif "PSO" in algorithm:
+            # Run PSO with user-defined values
+            cities, best_tour, best_distance = run_tsp_pso(30, max_iterations, num_nodes)
 
-        self.ax.plot(x, y, c="blue", linestyle="--", label="Path")
+            self.plot_tsp_solution(cities, best_tour, f"PSO Solution - Distance: {best_distance:.2f}")
+            self.result_label.setText(f"PSO Best Distance: {best_distance:.2f}")
 
-        self.ax.set_title(f"TSP Solution - Cost: {cost:.2f}")
-        self.ax.set_xlabel("X-coordinate")
-        self.ax.set_ylabel("Y-coordinate")
-        self.ax.legend()
-        self.ax.grid(True)
+    def plot_tsp_solution(self, nodes, tour, title):
+        """Plot the TSP solution inside the window using Matplotlib."""
+        self.figure.clear()
+        ax = self.figure.add_subplot(111)
 
+        # Get ordered coordinates for the tour
+        tour_nodes = nodes[tour + [tour[0]]]  # Return to starting node
+
+        ax.plot(tour_nodes[:, 0], tour_nodes[:, 1], 'bo-', markersize=8, label="Tour")
+        ax.set_title(title)
+        ax.set_xlabel("X Coordinate")
+        ax.set_ylabel("Y Coordinate")
+
+        for i, (x, y) in enumerate(nodes):
+            ax.text(x, y, str(i), fontsize=10, ha="right")
+
+        ax.legend()
         self.canvas.draw()
 
-        # Update result label
-        self.result_label.setText(f"Best Cost: {cost:.2f}")
+    def update_ui(self):
+        """Show ACO-specific parameters when ACO is selected, hide otherwise."""
+        algorithm = self.algorithm_selector.currentText()
+
+        aco_fields = [
+            self.alpha_label, self.alpha_input,
+            self.beta_label, self.beta_input,
+            self.pheromone_label, self.pheromone_input,
+            self.evap_label, self.evap_input,
+            self.ants_label, self.ants_input,
+            self.deposit_label, self.deposit_input
+        ]
+
+        if "ACO" in algorithm:
+            for field in aco_fields:
+                field.show()
+        else:  # Hide ACO parameters for PSO
+            for field in aco_fields:
+                field.hide()
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = ACOApp()
+    window = TSPApp()
     window.show()
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
