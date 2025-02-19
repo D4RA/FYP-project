@@ -8,7 +8,6 @@ from algorithms.ACo2 import ant_colony_optimization
 from algorithms.pso import run_tsp_pso
 from algorithms.GBC import dabc_fns
 
-
 class TSPApp(QWidget):
     def __init__(self):
         super().__init__()
