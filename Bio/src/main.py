@@ -6,6 +6,7 @@ from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from algorithms.ACo2 import ant_colony_optimization
 from algorithms.pso import run_tsp_pso
+from algorithms.GBC import dabc_fns
 
 
 class TSPApp(QWidget):
@@ -23,7 +24,7 @@ class TSPApp(QWidget):
 
         # Algorithm Selector
         self.algorithm_selector = QComboBox()
-        self.algorithm_selector.addItems(["Ant Colony Optimization (ACO)", "Particle Swarm Optimization (PSO)"])
+        self.algorithm_selector.addItems(["Ant Colony Optimization (ACO)", "Particle Swarm Optimization (PSO)", "DABC_FNS(GBC)"])
         self.algorithm_selector.currentIndexChanged.connect(self.update_ui)
         self.sidebar.addWidget(QLabel("Select Algorithm:"))
         self.sidebar.addWidget(self.algorithm_selector)
@@ -108,6 +109,9 @@ class TSPApp(QWidget):
         num_nodes = int(self.node_input.text())  # Get user-defined node count
         max_iterations = int(self.iter_input.text())  # Get user-defined iterations
 
+        cost_matrix = np.random.rand(num_nodes, num_nodes) * 100
+        cost_matrix = (cost_matrix + cost_matrix.T) / 2
+
         if "ACO" in algorithm:
             alpha = float(self.alpha_input.text())
             beta = float(self.beta_input.text())
@@ -133,8 +137,19 @@ class TSPApp(QWidget):
             # Run PSO with user-defined values
             cities, best_tour, best_distance = run_tsp_pso(30, max_iterations, num_nodes)
 
+            cities = np.array(cities)
+
             self.plot_tsp_solution(cities, best_tour, f"PSO Solution - Distance: {best_distance:.2f}")
             self.result_label.setText(f"PSO Best Distance: {best_distance:.2f}")
+
+        elif "DABC-FNS" in algorithm:
+            # Run DABC-FNS Algorithm
+            best_solution, best_cost = dabc_fns(cost_matrix, sn=30, max_cycle=max_iterations, trial_limit=100)
+
+            # Plot and display result
+            cities = np.random.rand(num_nodes, 2) * 100
+            self.plot_tsp_solution(cities, best_solution, title=f"DABC-FNS Solution - Cost: {best_cost:.2f}")
+            self.result_label.setText(f"DABC-FNS Best Cost: {best_cost:.2f}")
 
     def plot_tsp_solution(self, nodes, tour, title):
         """Plot the TSP solution inside the window using Matplotlib."""
