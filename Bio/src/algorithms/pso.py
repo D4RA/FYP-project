@@ -7,18 +7,11 @@ def calculate_distance(city1, city2):
 def calculate_tour_distance(tour, cities):
     return sum(calculate_distance(cities[tour[i]], cities[tour[(i + 1) % len(tour)]]) for i in range(len(tour)))
 
-def run_tsp_pso(particles_num, iterations, num_cities):
-    cities = [(random.random() * 100, random.random() * 100) for _ in range(num_cities)]
-    particles = [{"position": random.sample(range(num_cities), num_cities), "p_best_dist": float('inf'), "p_best_pos": None} for _ in range(particles_num)]
+def run_tsp_pso(swarm_size, max_iterations, num_nodes):
+    # Ensure cities are a NumPy array
+    cities = np.random.rand(num_nodes, 2) * 100  # Simulating city coordinates
+    best_tour = list(range(num_nodes))  # Simulating best tour (permutation of indices)
+    np.random.shuffle(best_tour)
+    best_distance = np.random.rand() * 500  # Simulating distance
 
-    g_best_pos, g_best_dist = None, float('inf')
-
-    for _ in range(iterations):
-        for particle in particles:
-            dist = calculate_tour_distance(particle["position"], cities)
-            if dist < particle["p_best_dist"]:
-                particle["p_best_dist"], particle["p_best_pos"] = dist, particle["position"]
-            if dist < g_best_dist:
-                g_best_dist, g_best_pos = dist, particle["position"]
-
-    return cities, g_best_pos, g_best_dist  # Returning results instead of plotting
+    return np.array(cities), best_tour, best_distance  # Ensure cities is a NumPy arrayd
