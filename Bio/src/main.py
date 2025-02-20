@@ -4,8 +4,8 @@ from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPu
 from PyQt5.QtCore import Qt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
-from algorithms.ACo2 import ant_colony_optimization
-from algorithms.pso import run_tsp_pso
+from algorithms.ACO import ant_colony_optimization
+from algorithms.PSO import run_tsp_pso
 from algorithms.GBC import dabc_fns
 
 class TSPApp(QWidget):
@@ -69,6 +69,33 @@ class TSPApp(QWidget):
         self.sidebar.addWidget(self.deposit_label)
         self.deposit_input = QLineEdit("100.0")
         self.sidebar.addWidget(self.deposit_input)
+
+        #PSO specific inputs
+
+        self.pso_particles_label = QLabel("Number of Particles (PSO):")
+        self.sidebar.addWidget(self.pso_particles_label)
+        self.pso_particles_input = QLineEdit("30")
+        self.sidebar.addWidget(self.pso_particles_input)
+
+        self.pso_w_label = QLabel("Inertia Weight (w - PSO):")
+        self.sidebar.addWidget(self.pso_w_label)
+        self.pso_w_input = QLineEdit("0.7")
+        self.sidebar.addWidget(self.pso_w_input)
+
+        self.pso_c1_label = QLabel("Cognitive Coefficient (c1 - PSO):")
+        self.sidebar.addWidget(self.pso_c1_label)
+        self.pso_c1_input = QLineEdit("1.5")
+        self.sidebar.addWidget(self.pso_c1_input)
+
+        self.pso_c2_label = QLabel("Social Coefficient (c2 - PSO):")
+        self.sidebar.addWidget(self.pso_c2_label)
+        self.pso_c2_input = QLineEdit("2.0")
+        self.sidebar.addWidget(self.pso_c2_input)
+
+        self.pso_vmax_label = QLabel("Max Velocity (v_max - PSO):")
+        self.sidebar.addWidget(self.pso_vmax_label)
+        self.pso_vmax_input = QLineEdit("4.0")
+        self.sidebar.addWidget(self.pso_vmax_input)
 
         # Run Button
         self.run_button = QPushButton("Run Algorithm")
@@ -134,6 +161,14 @@ class TSPApp(QWidget):
 
         elif "PSO" in algorithm:
             # Run PSO with user-defined values
+            num_particles = int(self.pso_particles_input.text())
+            w = float(self.pso_w_input.text())
+            c1 = float(self.pso_c1_input.text())
+            c2 = float(self.pso_c2_input.text())
+            v_max = float(self.pso_vmax_input.text())
+
+            # Run PSO with user-defined parameters
+
             cities, best_tour, best_distance = run_tsp_pso(30, max_iterations, num_nodes)
 
             cities = np.array(cities)
@@ -181,12 +216,26 @@ class TSPApp(QWidget):
             self.ants_label, self.ants_input,
             self.deposit_label, self.deposit_input
         ]
+        pso_fields = [
+            self.pso_w_label,self.pso_w_input,
+            self.pso_particles_label,self.pso_particles_input,
+            self.pso_vmax_label,self.pso_vmax_input,
+            self.pso_c1_label,self.pso_c1_input,
+            self.pso_c2_label,self.pso_c2_input
+        ]
 
         if "ACO" in algorithm:
             for field in aco_fields:
                 field.show()
-        else:  # Hide ACO parameters for PSO
+            for field in pso_fields:
+                field.hide()
+        elif "PSO" in algorithm:
+            for field in pso_fields:
+                field.show()
             for field in aco_fields:
+                field.hide()
+        else:
+            for field in aco_fields + pso_fields:
                 field.hide()
 
 
