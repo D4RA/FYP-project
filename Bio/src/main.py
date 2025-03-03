@@ -177,11 +177,32 @@ class TSPApp(QWidget):
 
             self.result_label.setText(f"PSO Best Distance: {best_distance:.2f}")
 
-        elif "DABC-FNS" in algorithm:
+
+        elif "DABC_FNS" in algorithm:
+
+            # Generate a random cost matrix
+
+            cost_matrix = np.random.rand(num_nodes, num_nodes) * 100
+
+            cost_matrix = (cost_matrix + cost_matrix.T) / 2  # Make it symmetric
+
+            # Run DABC-FNS Algorithm
+
             best_solution, best_cost = dabc_fns(cost_matrix, sn=30, max_cycle=max_iterations, trial_limit=100)
 
+            # Generate random city positions
+
             cities = np.random.rand(num_nodes, 2) * 100
+
+            # Plot the solution
+
+            #ax = self.figure.add_subplot(111)
+
             plot_tsp_solution(ax, cities, best_solution, f"DABC-FNS Solution - Cost: {best_cost:.2f}")
+
+            self.canvas.draw()
+
+            # Update result label
 
             self.result_label.setText(f"DABC-FNS Best Cost: {best_cost:.2f}")
 
