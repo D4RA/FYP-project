@@ -1,16 +1,20 @@
 import sys
 import numpy as np
+from PyQt5.QtGui import QCursor
 from PyQt5.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
-    QComboBox, QLabel, QLineEdit, QFrame, QSizePolicy
+    QComboBox, QLabel, QLineEdit, QFrame, QSizePolicy, QTextEdit
 )
 from PyQt5.QtCore import Qt
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
+from descriptions import descriptions
 from algorithms.ACO import ant_colony_optimization
 from algorithms.PSO import run_tsp_pso
 from algorithms.GBC import dabc_fns
 from plotting.utils import plot_tsp_solution
+from algorithms.GA import run_tsp_ga
+
 
 class TSPApp(QWidget):
     def __init__(self):
@@ -27,10 +31,22 @@ class TSPApp(QWidget):
 
         # Algorithm Selector
         self.algorithm_selector = QComboBox()
-        self.algorithm_selector.addItems(["Ant Colony Optimization (ACO)", "Particle Swarm Optimization (PSO)", "DABC_FNS(GBC)"])
+        self.algorithm_selector.addItems(["Ant Colony Optimization (ACO)", "Particle Swarm Optimization (PSO)", "DABC_FNS(GBC)","Genetic Algorithm (GA)"])
         self.algorithm_selector.currentIndexChanged.connect(self.update_ui)
         self.sidebar.addWidget(QLabel("Select Algorithm:"))
         self.sidebar.addWidget(self.algorithm_selector)
+
+        self.topology_label = QLabel("PSO Topology:")
+        self.sidebar.addWidget(self.topology_label)
+        self.topology_selector = QComboBox()
+        self.topology_selector.addItems(["Star", "Ring"])
+        self.sidebar.addWidget(self.topology_selector)
+
+        self.info_panel = QTextEdit()
+        self.info_panel.setReadOnly(True)
+        self.info_panel.setFrameShape(QFrame.Box)
+        self.info_panel.setStyleSheet("font-size: 14px; padding: 10px; background-color: #f9f9f9;")
+        self.info_panel.setFixedWidth(250)  # Adjust width of the text panel
 
         # Common Inputs
         self.node_label = QLabel("Number of Nodes (Cities):")
@@ -100,6 +116,22 @@ class TSPApp(QWidget):
         self.pso_vmax_input = QLineEdit("4.0")
         self.sidebar.addWidget(self.pso_vmax_input)
 
+        # GA Specific Inputs
+        self.ga_population_label = QLabel("Population Size (GA):")
+        self.sidebar.addWidget(self.ga_population_label)
+        self.ga_population_input = QLineEdit("50")
+        self.sidebar.addWidget(self.ga_population_input)
+
+        self.ga_generations_label = QLabel("Generations (GA):")
+        self.sidebar.addWidget(self.ga_generations_label)
+        self.ga_generations_input = QLineEdit("100")
+        self.sidebar.addWidget(self.ga_generations_input)
+
+        self.ga_mutation_label = QLabel("Mutation Rate (GA):")
+        self.sidebar.addWidget(self.ga_mutation_label)
+        self.ga_mutation_input = QLineEdit("0.1")
+        self.sidebar.addWidget(self.ga_mutation_input)
+
         # Run Button
         self.run_button = QPushButton("Run Algorithm")
         self.run_button.clicked.connect(self.run_algorithm)
@@ -121,6 +153,10 @@ class TSPApp(QWidget):
         self.canvas = FigureCanvas(self.figure)
         self.result_area.addWidget(self.canvas, 1)
 
+        self.main_layout.addLayout(self.sidebar)
+        self.main_layout.addLayout(self.result_area)
+        self.main_layout.addWidget(self.info_panel)
+
         # Result Label
         self.result_label = QLabel("Results will appear here.")
         self.result_label.setAlignment(Qt.AlignCenter)
@@ -134,6 +170,19 @@ class TSPApp(QWidget):
         self.setLayout(self.main_layout)
 
         self.update_ui()
+
+    def create_clickable_label(self, text):
+        "Creates a clickable label that shows a description in the info panel."
+        label = QLabel(text)
+        label.setCursor(QCursor(Qt.PointingHandCursor))
+        label.setStyleSheet("color: blue; text-decoration: underline;")
+        label.mousePressEvent = lambda event: self.show_description(text)
+        self.sidebar.addWidget(label)
+
+    def show_description(self, label_text):
+        "Displays text in the info panel when a label is clicked."
+        description = descriptions.get(label_text, "No description available.")
+        self.info_panel.setText(description)
 
     def run_algorithm(self):
         algorithm = self.algorithm_selector.currentText()
@@ -163,20 +212,28 @@ class TSPApp(QWidget):
 
             self.result_label.setText(f"ACO Best Cost: {best_cost:.2f}")
 
+
+
+
         elif "PSO" in algorithm:
             num_particles = int(self.pso_particles_input.text())
             w = float(self.pso_w_input.text())
             c1 = float(self.pso_c1_input.text())
             c2 = float(self.pso_c2_input.text())
             v_max = float(self.pso_vmax_input.text())
-
-            cities, best_tour, best_distance = run_tsp_pso(num_particles, max_iterations, num_nodes)
-            cities = np.array(cities)
-
-            plot_tsp_solution(ax, cities, best_tour, f"PSO Solution - Distance: {best_distance:.2f}")
-
+            topology = self.topology_selector.currentText().lower()  # Get user-selected topology
+            cities, best_tour, best_distance = run_tsp_pso(
+                num_nodes=num_nodes,
+                num_particles=num_particles,
+                w=w,
+                c1=c1,
+                c2=c2,
+                v_max=v_max,
+                max_iterations=max_iterations,
+                topology=topology  # Pass selected topology
+            )
+            plot_tsp_solution(ax, cities, best_tour, f"PSO ({topology.capitalize()}) - Distance: {best_distance:.2f}")
             self.result_label.setText(f"PSO Best Distance: {best_distance:.2f}")
-
 
         elif "DABC_FNS" in algorithm:
 
@@ -206,6 +263,40 @@ class TSPApp(QWidget):
 
             self.result_label.setText(f"DABC-FNS Best Cost: {best_cost:.2f}")
 
+
+
+        elif "GA" in algorithm:
+
+            # Get user inputs
+
+            population_size = int(self.ga_population_input.text())
+
+            generations = int(self.ga_generations_input.text())
+
+            mutation_rate = float(self.ga_mutation_input.text())
+
+            # Run the Genetic Algorithm
+
+            cities, best_tour, best_distance = run_tsp_ga(
+
+                num_cities=num_nodes,
+
+                population_size=population_size,
+
+                generations=generations,
+
+                mutation_rate=mutation_rate
+
+            )
+
+            # Plot the best solution
+
+            plot_tsp_solution(ax, cities, best_tour, f"GA Solution - Distance: {best_distance:.2f}")
+
+            # Update result label
+
+            self.result_label.setText(f"GA Best Distance: {best_distance:.2f}")
+
         self.canvas.draw()
 
     def update_ui(self):
@@ -217,9 +308,27 @@ class TSPApp(QWidget):
         pso_fields = [self.pso_particles_label, self.pso_particles_input, self.pso_w_label, self.pso_w_input,
                       self.pso_c1_label, self.pso_c1_input, self.pso_c2_label, self.pso_c2_input,
                       self.pso_vmax_label, self.pso_vmax_input]
+        ga_fields = [
+            self.ga_population_label, self.ga_population_input,
+            self.ga_generations_label, self.ga_generations_input,
+            self.ga_mutation_label, self.ga_mutation_input
+        ]
 
-        for field in aco_fields + pso_fields:
-            field.setVisible("ACO" in algorithm if field in aco_fields else "PSO" in algorithm)
+        if "ACO" in algorithm:
+            for field in aco_fields:
+                field.show()
+            for field in pso_fields + ga_fields:
+                field.hide()
+        elif "PSO" in algorithm:
+            for field in pso_fields:
+                field.show()
+            for field in aco_fields + ga_fields:
+                field.hide()
+        elif "GA" in algorithm:
+            for field in ga_fields:
+                field.show()
+            for field in aco_fields + pso_fields:
+                field.hide()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
