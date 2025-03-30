@@ -21,10 +21,16 @@ class TSPApp(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("TSP Solver")
-        self.setGeometry(100, 100, 800, 500)
+        self.setGeometry(100, 100, 1200, 700)
+        self.setMinimumSize(1000,600)
+
+        QApplication.setAttribute(Qt.AA_EnableHighDpiScaling, True)
+        QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps, True)
 
         # Main Layout
         self.main_layout = QHBoxLayout(self)
+
+        self.main_layout.setContentsMargins(10,10,10,10)
 
         # Sidebar Layout
         self.sidebar = QVBoxLayout()
@@ -171,8 +177,8 @@ class TSPApp(QWidget):
             if isinstance(widget, (QLineEdit, QComboBox)):
                 widget.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
 
-        self.main_layout.addLayout(self.sidebar, 1)
-        self.main_layout.addLayout(self.result_area,3)
+        self.main_layout.addLayout(self.sidebar,stretch= 1)
+        self.main_layout.addLayout(self.result_area,stretch= 4)
 
         # Result Display Area
         self.result_area = QVBoxLayout()
@@ -185,8 +191,8 @@ class TSPApp(QWidget):
 
         self.main_layout.addLayout(self.sidebar)
         self.main_layout.addLayout(self.result_area)
-        self.main_layout.addWidget(self.info_panel)
-        self.main_layout.addLayout(self.result_area, 3)
+        self.main_layout.addWidget(self.info_panel,stretch=1)
+        self.main_layout.addLayout(self.result_area,stretch = 4)
 
         self.result_label = QLabel("Results will appear here.")
         self.result_label.setAlignment(Qt.AlignCenter)
@@ -344,6 +350,7 @@ class TSPApp(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
+    app.setFont(QFont("Segoe UI", 11))
     window = TSPApp()
     window.show()
     sys.exit(app.exec())
