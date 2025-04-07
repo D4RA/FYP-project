@@ -31,57 +31,63 @@ def ordered_crossover(parent1, parent2):
     return child
 
 
-# def partially_mapped_crossover(parent1, parent2):
-#     "Performs Partially Mapped Crossover (PMX) for TSP."
-#     size = len(parent1)
-#     start, end = sorted(random.sample(range(size), 2))
-#
-#     child = [-1] * size
-#     mapping = {}
-#
-#     # Copy the crossover section and create mapping
-#     for i in range(start, end):
-#         child[i] = parent1[i]
-#         mapping[parent1[i]] = parent2[i]
-#         mapping[parent2[i]] = parent1[i]
-#
-#     # Fill remaining positions
-#     for i in range(size):
-#         if child[i] == -1:
-#             candidate = parent2[i]
-#             while candidate in mapping:
-#                 candidate = mapping[candidate]
-#             child[i] = candidate
-#
-#     return child
-
-def cycle_crossover(parent1, parent2):
-    """Performs Cycle Crossover (CX) for TSP."""
+def partially_mapped_crossover(parent1, parent2):
+    """Robust PMX implementation for TSP."""
     size = len(parent1)
+    start, end = sorted(random.sample(range(size), 2))
+
     child = [-1] * size
-    cycle = 0
-    used = set()
+    # Step 1: Copy the slice from parent1 to child
+    child[start:end] = parent1[start:end]
 
-    while -1 in child:
-        if cycle % 2 == 0:  # Use parent1 for even cycles
-            index = next(i for i in range(size) if child[i] == -1)
-            start = parent1[index]
-        else:  # Use parent2 for odd cycles
-            index = next(i for i in range(size) if child[i] == -1)
-            start = parent2[index]
+    # Step 2: Create mapping from parent2 slice
+    for i in range(start, end):
+        if parent2[i] not in child:
+            val = parent2[i]
+            pos = i
+            while True:
+                val_in_parent1 = parent1[pos]
+                pos = parent2.index(val_in_parent1)
+                if child[pos] == -1:
+                    child[pos] = val
+                    break
 
-        # Form the cycle
-        while start not in used:
-            child[index] = parent1[index]
-            used.add(start)
-            index = parent1.index(parent2[index])
-            start = parent1[index]
-
-        cycle += 1
+    # Step 3: Fill in remaining positions from parent2
+    for i in range(size):
+        if child[i] == -1:
+            child[i] = parent2[i]
 
     return child
 
 
+def cycle_crossover(parent1, parent2):
+    """Performs robust Cycle Crossover (CX) for TSP."""
+    size = len(parent1)
+    child = [-1] * size
+    index = 0
+    visited = [False] * size
+
+    while not all(visited):
+        if visited[index]:
+            index = visited.index(False)
+
+        start = index
+        val = parent1[index]
+
+        # Start forming cycle
+        while True:
+            child[index] = parent1[index]
+            visited[index] = True
+            index = parent1.index(parent2[index])
+            if index == start:
+                break
+
+        # Fill the rest from parent2
+        for i in range(size):
+            if not visited[i]:
+                child[i] = parent2[i]
+
+    return child
 
 def swap_mutation(tour, mutation_rate):
     "Swap two cities in the tour with probability mutation_rate."
@@ -117,14 +123,14 @@ def run_tsp_ga(num_cities, population_size, generations, mutation_rate, crossove
             parent2 = tournament_selection(population, fitnesses)
 
             # Choose crossover type based on user selection
-            if crossover_type == "Ordered Crossover (OX)":
+            if crossover_type == "Order Crossover (OX1)":
                 child1, child2 = ordered_crossover(parent1, parent2), ordered_crossover(parent2, parent1)
 
             elif crossover_type == "Cycle Crossover (CX)":
                 child1, child2 = cycle_crossover(parent1, parent2), cycle_crossover(parent2, parent1)
-            else:  # Random selection
-                crossover_fn = random.choice([ordered_crossover, cycle_crossover])
-                child1, child2 = crossover_fn(parent1, parent2), crossover_fn(parent2, parent1)
+
+            elif crossover_type == "Partially Mapped Crossover (PMX)":
+                child1,child2 = partially_mapped_crossover(parent1,parent2), partially_mapped_crossover(parent1, parent2)
 
             # Mutation
             child1, child2 = swap_mutation(child1, mutation_rate), swap_mutation(child2, mutation_rate)
