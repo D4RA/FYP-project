@@ -6,4 +6,10 @@ This project demonstrates how various algorithms like ACO, PSO, GA, and GBC solv
 
 1. Run `TSP_Solver.exe` (no installation needed)
 2. Or run manually:
-navigate to main.py and click run
+
+clone code base 
+
+naviagte to main.py
+
+
+click run 
