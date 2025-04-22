@@ -8,15 +8,22 @@ from Bio.src.plotting.utils import plot_tsp_solution
 # Assuming you're using this utility
 
 def cost_matrix_to_coords(cost_matrix):
-    """Reverse-engineer approximate coordinates for plotting from a cost matrix."""
     num_cities = cost_matrix.shape[0]
     angle_step = 2 * np.pi / num_cities
-    return [(np.cos(i * angle_step) * 50 + 50, np.sin(i * angle_step) * 50 + 50) for i in range(num_cities)]
+    rotation = np.random.rand() * 2 * np.pi  # Random rotation
+    radius = 50 + np.random.rand() * 10      # Slight random radius
+    return [
+        (
+            np.cos(i * angle_step + rotation) * radius + 50,
+            np.sin(i * angle_step + rotation) * radius + 50
+        )
+        for i in range(num_cities)
+    ]
+
 
 
 def ant_colony_optimization(
-    cost_matrix, alpha, beta, initial_pheromone, evap_rate, m, constant, I_max,
-    ax=None, canvas=None
+    cost_matrix, alpha, beta, initial_pheromone, evap_rate, m, constant, I_max
 ):
     num_nodes = len(cost_matrix)
 
@@ -28,6 +35,7 @@ def ant_colony_optimization(
     best_cost = float('inf')
 
     for iteration in range(I_max):
+        print(f"Starting iteration: {iteration + 1}")
         solutions = []
         costs = []
 
@@ -35,16 +43,24 @@ def ant_colony_optimization(
         for _ in range(m):
             visited = [random.randint(0, num_nodes - 1)]
             while len(visited) < num_nodes:
+                current_node = visited[-1]
                 probabilities = [
-                    (j, (pheromones[visited[-1]][j] ** alpha) * (heuristics[visited[-1]][j] ** beta))
+                    (j, (pheromones[current_node][j] ** alpha) * (heuristics[current_node][j] ** beta))
                     for j in range(num_nodes) if j not in visited
                 ]
+
                 total = sum(prob for _, prob in probabilities)
-                probabilities = [(node, prob / total) for node, prob in probabilities]
-                next_node = random.choices(
-                    [node for node, _ in probabilities],
-                    [prob for _, prob in probabilities]
-                )[0]
+
+                # Check for zero sum and correct
+                if total < 1e-10:
+                    probabilities = [(node, 1 / len(probabilities)) for node, _ in probabilities]
+                else:
+                    probabilities = [(node, prob / total) for node, prob in probabilities]
+
+                # Debug clearly visible
+                nodes, probs = zip(*probabilities)
+                next_node = random.choices(nodes, probs)[0]
+
                 visited.append(next_node)
 
             visited.append(visited[0])  # Close the loop
@@ -66,26 +82,20 @@ def ant_colony_optimization(
         # === Update Pheromones ===
         # Evaporation
         pheromones *= (1 - evap_rate)
+        pheromone_deposit = constant / iteration_best_cost
 
-        # Deposit pheromone from the best ant of this iteration
+        # Update pheromones on edges used by the best ant
         for i in range(len(iteration_best_solution) - 1):
             a = iteration_best_solution[i]
             b = iteration_best_solution[i + 1]
-            pheromones[a][b] += constant / iteration_best_cost
-            pheromones[b][a] += constant / iteration_best_cost  # Assuming symmetric TSP
+            pheromones[a][b] += pheromone_deposit
+            pheromones[b][a] += pheromone_deposit  # Symmetric
 
-        # Optional: Close the loop deposit
+        # Loop closure explicitly (optional but recommended)
         a = iteration_best_solution[-1]
         b = iteration_best_solution[0]
-        pheromones[a][b] += constant / iteration_best_cost
-        pheromones[b][a] += constant / iteration_best_cost
+        pheromones[a][b] += pheromone_deposit
+        pheromones[b][a] += pheromone_deposit
 
-        # === Live Plotting ===
-        if ax and canvas:
-            ax.clear()
-            plot_tsp_solution(ax, cost_matrix_to_coords(cost_matrix), iteration_best_solution,
-                              f"ACO Progress - Iteration {iteration + 1}")
-            canvas.draw()
-            QApplication.processEvents()
 
     return best_solution, best_cost
