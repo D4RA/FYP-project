@@ -3,17 +3,17 @@ import random
 
 
 def calculate_distance(city1, city2):
-    "Calculate Euclidean distance between two cities"
+   # Calculate Euclidean distance between two cities
     return np.linalg.norm(np.array(city1) - np.array(city2))
 
 
 def calculate_tour_distance(tour, cities):
-    "Calculate total distance of a tour"
+    #Calculate total distance of a tour
     return sum(calculate_distance(cities[tour[i]], cities[tour[(i + 1) % len(tour)]]) for i in range(len(tour)))
 
 
 def ordered_crossover(parent1, parent2):
-    "Performs Ordered Crossover (OX) for TSP."
+    #Performs Ordered Crossover (OX) for TSP.
     size = len(parent1)
     start, end = sorted(random.sample(range(size), 2))
 
@@ -32,7 +32,7 @@ def ordered_crossover(parent1, parent2):
 
 
 def partially_mapped_crossover(parent1, parent2):
-    """Robust PMX implementation for TSP."""
+    # PMX implementation for TSP.
     size = len(parent1)
     start, end = sorted(random.sample(range(size), 2))
 
@@ -61,7 +61,7 @@ def partially_mapped_crossover(parent1, parent2):
 
 
 def cycle_crossover(parent1, parent2):
-    """Performs robust Cycle Crossover (CX) for TSP."""
+    #Cycle Crossover (CX) for TSP.
     size = len(parent1)
     child = [-1] * size
     index = 0
@@ -90,7 +90,7 @@ def cycle_crossover(parent1, parent2):
     return child
 
 def swap_mutation(tour, mutation_rate):
-    "Swap two cities in the tour with probability mutation_rate."
+    #Swap two cities in the tour with probability mutation_rate.
     if random.random() < mutation_rate:
         i, j = np.random.choice(len(tour), 2, replace=False)
         tour[i], tour[j] = tour[j], tour[i]
@@ -98,15 +98,13 @@ def swap_mutation(tour, mutation_rate):
 
 
 def tournament_selection(population, fitnesses, tournament_size=3):
-    "Selects a parent using tournament selection."
+    #Selects a parent using tournament selection.
     selected_indices = np.random.choice(len(population), tournament_size, replace=False)
     best_index = selected_indices[np.argmin([fitnesses[i] for i in selected_indices])]
     return population[best_index]
 
 
 def run_tsp_ga(num_cities, population_size, generations, mutation_rate, crossover_type="Random Selection"):
-    """Runs Genetic Algorithm for TSP with user-selected crossover, and tracks best fitness per generation."""
-
     cities = np.random.rand(num_cities, 2) * 100
     population = [np.random.permutation(num_cities).tolist() for _ in range(population_size)]
     fitnesses = np.array([calculate_tour_distance(tour, cities) for tour in population])
