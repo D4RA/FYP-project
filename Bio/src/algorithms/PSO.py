@@ -7,9 +7,20 @@ def calculate_distance(city1, city2):
     return np.linalg.norm(np.array(city1) - np.array(city2))
 
 
-def calculate_tour_distance(tour, cities):
-    """Calculate total distance of a tour."""
-    return sum(calculate_distance(cities[tour[i]], cities[tour[(i + 1) % len(tour)]]) for i in range(len(tour)))
+def calculate_tour_distance(tour, cost_matrix, bridge=None):
+    total = sum(cost_matrix[tour[i]][tour[(i + 1) % len(tour)]] for i in range(len(tour)))
+
+    if bridge:
+        a, b = bridge
+        used = any(
+            (tour[i] == a and tour[(i + 1) % len(tour)] == b) or
+            (tour[i] == b and tour[(i + 1) % len(tour)] == a)
+            for i in range(len(tour))
+        )
+        if not used:
+            total += 1000  # Apply large penalty
+
+    return total
 
 
 def swap_mutation(tour):
@@ -33,13 +44,30 @@ def get_local_best(swarm, fitnesses, index, neighborhood_size=2):
     return swarm[best_neighbor_idx]
 
 
-def run_tsp_pso(num_nodes, num_particles, w, c1, c2, v_max, max_iterations, topology="star"):
+def run_tsp_pso(num_nodes, num_particles, w, c1, c2, v_max, max_iterations, topology="star", bridge = None):
     cities = np.random.rand(num_nodes, 2) * 100
+    cost_matrix = np.zeros((num_nodes, num_nodes))
+    for i in range(num_nodes):
+        for j in range(num_nodes):
+            if i == j:
+                cost_matrix[i][j] = np.inf
+            else:
+                cost_matrix[i][j] = np.linalg.norm(cities[i] - cities[j])
+
+    # ✅ Soft bridge constraint
+    if bridge:
+        a, b = bridge
+        cost_matrix[a][b] = cost_matrix[b][a] = 1e-5  # near-zero cost
     swarm = [np.random.permutation(num_nodes).tolist() for _ in range(num_particles)]
     velocities = [np.zeros(num_nodes) for _ in range(num_particles)]
 
+    for i in range(num_nodes):
+        for j in range(num_nodes):
+            if i != j and cost_matrix[i][j] == 0:
+                cost_matrix[i][j] = np.linalg.norm(cities[i] - cities[j])
+
     pBest = swarm.copy()
-    pBest_costs = np.array([calculate_tour_distance(t, cities) for t in swarm])
+    pBest_costs = np.array([calculate_tour_distance(t, cost_matrix,bridge=bridge) for t in swarm])
 
     # For wheel, define hub as index 0
     if topology.lower() == "wheel":
@@ -73,7 +101,7 @@ def run_tsp_pso(num_nodes, num_particles, w, c1, c2, v_max, max_iterations, topo
 
             velocities[i] = new_velocity
             new_tour = swap_mutation(swarm[i])  # still TSP-specific position update
-            new_cost = calculate_tour_distance(new_tour, cities)
+            new_cost = calculate_tour_distance(new_tour, cost_matrix,bridge=bridge)
 
             if new_cost < pBest_costs[i]:
                 pBest[i] = new_tour

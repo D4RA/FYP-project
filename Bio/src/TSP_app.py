@@ -300,14 +300,14 @@ class TSPApp(QWidget):
                     if 0 <= city_a < num_nodes and 0 <= city_b < num_nodes and city_a != city_b:
                         cost_matrix = apply_mandatory_bridge(cost_matrix, city_a, city_b)
                         bridge = (city_a, city_b)  # ← Store the bridge tuple
-                        print(f"✅ Applied bridge between City {city_a} and City {city_b}")
+                        print(f"Applied bridge between City {city_a} and City {city_b}")
                     else:
                         print(
-                            f"⚠️ Invalid city indices (must be between 0 and {num_nodes - 1} and not equal). Skipping bridge.")
+                            f" Invalid city indices (must be between 0 and {num_nodes - 1} and not equal). Skipping bridge.")
                 except Exception as e:
-                    print(f"⚠️ Failed to apply bridge: {e}")
+                    print(f" Failed to apply bridge: {e}")
             else:
-                print("🔹 Bridge not enabled.")
+                print(" Bridge not enabled.")
 
             # Step 3: Set up canvas
             self.figure.clear()
@@ -355,10 +355,11 @@ class TSPApp(QWidget):
                 c2=c2,
                 v_max=v_max,
                 max_iterations=max_iterations,
-                topology=topology  # Pass selected topology
+                topology=topology,
+                bridge=(0,1) if self.bridge_checkbox.isChecked() else None
 
             )
-            plot_tsp_solution(ax, cities, best_tour, f"PSO ({topology.capitalize()}) - Distance: {best_distance:.2f}")
+            plot_tsp_solution(ax, cities, best_tour, f"PSO ({topology.capitalize()}) - Distance: {best_distance:.2f}",bridge=bridge)
             self.result_label.setText(f"PSO Best Distance: {best_distance:.2f}")
 
 
@@ -420,18 +421,23 @@ class TSPApp(QWidget):
         aco_fields = [self.alpha_label, self.alpha_input, self.beta_label, self.beta_input,
                       self.pheromone_label, self.pheromone_input, self.evap_label, self.evap_input,
                       self.ants_label, self.ants_input, self.deposit_label, self.deposit_input]
+
         pso_fields = [self.pso_particles_label, self.pso_particles_input, self.pso_w_label, self.pso_w_input,
                       self.pso_c1_label, self.pso_c1_input, self.pso_c2_label, self.pso_c2_input,
                       self.pso_vmax_label, self.pso_vmax_input, self.topology_label, self.topology_selector]
+
         ga_fields = [self.ga_population_label, self.ga_population_input,
                      self.ga_generations_label, self.ga_generations_input,
                      self.ga_mutation_label, self.ga_mutation_input, self.ga_crossover_selector,
                      self.ga_crossover_label]
+
         gbc_fields = [self.gbc_sn_label, self.gbc_sn_input,
                       self.gbc_max_cycle_label, self.gbc_max_cycle_input,
                       self.gbc_trial_limit_label, self.gbc_trial_limit_input]
         # Common field to hide for GA and GBC
         max_iter_fields = [self.iter_label, self.iter_input]
+
+        bridge_fields = [self.bridge_checkbox,self.bridge_city_b_input,self.bridge_city_a_input]
 
         if "ACO" in algorithm:
             for field in aco_fields:
@@ -440,6 +446,8 @@ class TSPApp(QWidget):
                 field.hide()
             for field in max_iter_fields:
                 field.show()
+            for field in bridge_fields:
+                field.show()
         elif "PSO" in algorithm:
             for field in pso_fields:
                 field.show()
@@ -447,18 +455,26 @@ class TSPApp(QWidget):
                 field.hide()
             for field in max_iter_fields:
                 field.show()
+            for field in bridge_fields:
+                field.show()
         elif "GA" in algorithm:
             for field in ga_fields:
                 field.show()
             for field in aco_fields + pso_fields + gbc_fields:
                 field.hide()
-            for field in max_iter_fields: field.hide()
+            for field in max_iter_fields:
+                field.hide()
+            for field in bridge_fields:
+                field.hide()
         elif "DABC_FNS" in algorithm:
             for field in gbc_fields:
                 field.show()
             for field in aco_fields + pso_fields + ga_fields:
                 field.hide()
-            for field in max_iter_fields: field.hide()
+            for field in max_iter_fields:
+                field.hide()
+            for field in bridge_fields:
+                field.hide()
         self.ga_canvas.setVisible("GA" in algorithm)
 
     def show_about_page(self):
