@@ -1,23 +1,28 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-def plot_tsp_solution(ax, cities, best_solution, title="TSP Solution", bridge=None):
-    ax.clear()  # Clear previous plot
-
-    # Extract x, y coordinates for the cities in tour order
-    x, y = zip(*[cities[i] for i in best_solution] + [cities[best_solution[0]]])  # Close the loop
+def plot_tsp_solution(ax, cities, tour, title="TSP Solution", bridge=None):
+    ax.clear()
+    x, y = zip(*[cities[i] for i in tour] + [cities[tour[0]]])
     ax.plot(x, y, 'bo-', markersize=8, label="Cities & Path")
     ax.plot(x[0], y[0], 'ro', markersize=10, label="Start")
-    ax.set_title(title)
 
-    # Highlight bridge if provided
+    # Only draw bridge if it's actually used
     if bridge:
-        city_a, city_b = bridge
-        bx = [cities[city_a][0], cities[city_b][0]]
-        by = [cities[city_a][1], cities[city_b][1]]
-        ax.plot(bx, by, 'r--', linewidth=3, label="Mandatory Bridge")
+        a, b = bridge
+        for i in range(len(tour)):
+            x1, x2 = tour[i], tour[(i + 1) % len(tour)]
+            if (x1 == a and x2 == b) or (x1 == b and x2 == a):
+                ax.plot(
+                    [cities[a][0], cities[b][0]],
+                    [cities[a][1], cities[b][1]],
+                    'r--', linewidth=3, label="Mandatory Bridge"
+                )
+                break  # stop after drawing
 
+    ax.set_title(title)
     ax.legend()
+
 
 
 def apply_mandatory_bridge(cost_matrix, city_a, city_b, bridge_cost=1e-5):
