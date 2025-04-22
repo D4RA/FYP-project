@@ -105,7 +105,7 @@ def tournament_selection(population, fitnesses, tournament_size=3):
 
 
 def run_tsp_ga(num_cities, population_size, generations, mutation_rate, crossover_type="Random Selection"):
-    """Runs Genetic Algorithm for TSP with user-selected crossover."""
+    """Runs Genetic Algorithm for TSP with user-selected crossover, and tracks best fitness per generation."""
 
     cities = np.random.rand(num_cities, 2) * 100
     population = [np.random.permutation(num_cities).tolist() for _ in range(population_size)]
@@ -114,15 +114,15 @@ def run_tsp_ga(num_cities, population_size, generations, mutation_rate, crossove
     best_tour = population[np.argmin(fitnesses)]
     best_distance = min(fitnesses)
 
+    history = [best_distance]  # Start tracking best distance
+
     for gen in range(generations):
         new_population = []
 
         for _ in range(population_size // 2):
-            # Selection
             parent1 = tournament_selection(population, fitnesses)
             parent2 = tournament_selection(population, fitnesses)
 
-            # Choose crossover type based on user selection
             if crossover_type == "Order Crossover (OX1)":
                 child1, child2 = ordered_crossover(parent1, parent2), ordered_crossover(parent2, parent1)
 
@@ -130,22 +130,26 @@ def run_tsp_ga(num_cities, population_size, generations, mutation_rate, crossove
                 child1, child2 = cycle_crossover(parent1, parent2), cycle_crossover(parent2, parent1)
 
             elif crossover_type == "Partially Mapped Crossover (PMX)":
-                child1,child2 = partially_mapped_crossover(parent1,parent2), partially_mapped_crossover(parent1, parent2)
+                child1, child2 = partially_mapped_crossover(parent1, parent2), partially_mapped_crossover(parent2, parent1)
+
+            else:
+                # Default to OX1 if unknown type
+                child1, child2 = ordered_crossover(parent1, parent2), ordered_crossover(parent2, parent1)
 
             # Mutation
-            child1, child2 = swap_mutation(child1, mutation_rate), swap_mutation(child2, mutation_rate)
+            child1 = swap_mutation(child1, mutation_rate)
+            child2 = swap_mutation(child2, mutation_rate)
 
             new_population.extend([child1, child2])
 
         # Evaluate new population
         new_fitnesses = np.array([calculate_tour_distance(tour, cities) for tour in new_population])
 
-        # Elitism: Keep the best individual from the previous generation
+        # Elitism
         best_index = np.argmin(fitnesses)
         best_tour = population[best_index]
         best_distance = fitnesses[best_index]
 
-        # Replace the worst individual in new population with best from previous gen
         worst_index = np.argmax(new_fitnesses)
         new_population[worst_index] = best_tour
         new_fitnesses[worst_index] = best_distance
@@ -154,9 +158,13 @@ def run_tsp_ga(num_cities, population_size, generations, mutation_rate, crossove
         population = new_population
         fitnesses = new_fitnesses
 
-        # Update best solution
-        if min(new_fitnesses) < best_distance:
+        # Update best overall solution
+        current_best_distance = min(new_fitnesses)
+        if current_best_distance < best_distance:
             best_tour = new_population[np.argmin(new_fitnesses)]
-            best_distance = min(new_fitnesses)
+            best_distance = current_best_distance
 
-    return np.array(cities), best_tour, best_distance
+        history.append(best_distance)  # Append to history
+
+    return np.array(cities), best_tour, best_distance, history
+

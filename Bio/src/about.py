@@ -16,14 +16,14 @@ class AboutPage(QWidget):
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignTop)
 
-        # 📝 Rich text HTML description
+        #Rich text HTML description
         info = QTextEdit()
         info.setReadOnly(True)
         info.setFont(QFont("Segoe UI", 11))
         info.setHtml(self.get_about_html())
         layout.addWidget(info)
 
-        # 🔙 Back button
+        # Back button
         back_btn = QPushButton("Back to Main App")
         back_btn.setFont(QFont("Segoe UI", 11))
         back_btn.clicked.connect(return_callback)
@@ -37,7 +37,7 @@ class AboutPage(QWidget):
         <p>
             The <strong>Travelling Salesman Problem</strong> (TSP) involves finding the shortest path
             that visits each city exactly once and returns to the starting point.
-            It is known for its computational complexity and is considered <em>NP-hard</em>.
+            It is known for its computational complexity and is considered <em>NP-hard</em> meaning that there is no known algorithm capable of solving for all instances, as the number of cities grows the possible solutions grows factorially.
         </p>
 
         <hr>
@@ -53,12 +53,17 @@ class AboutPage(QWidget):
 
         <hr>
         <h2>🕊️ Particle Swarm Optimization (PSO)</h2>
-        <p>Inspired by social behaviors of birds and fish. Each solution is a "particle" moving through space.</p>
+        <p>Inspired by social behaviors of birds and fish. Each solution is a "particle" moving through space and deos this by combining their own best position(personal best) and the swarms best position(global best).</p>
         <ul>
-            <li><strong>Inertia Weight (w):</strong> Momentum from previous movement.</li>
+            <li><strong>Inertia Weight (w):</strong> Controls momentum, Higher values encourage exploration.</li>
             <li><strong>c1:</strong> Cognitive attraction to particle’s best known position.</li>
             <li><strong>c2:</strong> Social attraction to neighborhood/global best.</li>
-            <li><strong>Topologies:</strong> Star (global), Ring (local), Wheel (hub-based).</li>
+            <li><strong>Topologies:</strong> <li>Star (global): All particles influenced by global best</li> <li>Ring (local): Particles influenced by closest local neighbours</li> <li>Wheel (hub-based): each particle is influenced by a single best particle</li>.</li>
+            <li><strong>Max Velocity:</strong>In PSO, each particle moves through the solution space with a certain velocity. The Max Velocity parameter (v_max) acts as a limit on how far a particle can move in a single iteration. It helps control exploration vs. exploitation:
+
+Higher v<sub>max</sub> allows particles to explore the solution space more broadly, potentially escaping local optima.
+
+Lower v<sub>max</sub> restricts particle movement, encouraging fine-tuned local searches around current best solutions..</li>
         </ul>
 
         <hr>
@@ -68,7 +73,7 @@ class AboutPage(QWidget):
             <li><strong>Population Size:</strong> Number of candidate solutions per generation.</li>
             <li><strong>Generations:</strong> How many times the population evolves.</li>
             <li><strong>Mutation Rate:</strong> Likelihood of small random changes in individuals.</li>
-            <li><strong>Crossover:</strong> Techniques like OX1, PMX, and CX to mix parent solutions.</li>
+            <li><strong>Crossover:</strong>defines the type of mutation applied to the create the children of a previous generation <li>Techniques:</li> <li>OX1: children are obtained by preserving the relative order from both parents while combining them to create a child</li><li>PMX:children are obtained by creating a mapping between parent elements and preserving that mapping through to the children<li>CX: children are obtained by preserving the the positions from both parents while cycling through their elements</li>.</li>
         </ul>
 
         <hr>
