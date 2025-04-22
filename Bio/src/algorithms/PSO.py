@@ -3,7 +3,7 @@ import random
 
 
 def calculate_distance(city1, city2):
-    """Calculate Euclidean distance between two cities."""
+    #Calculate Euclidean distance between two cities.
     return np.linalg.norm(np.array(city1) - np.array(city2))
 
 
@@ -24,7 +24,7 @@ def calculate_tour_distance(tour, cost_matrix, bridge=None):
 
 
 def swap_mutation(tour):
-    """Swap two random cities in the tour."""
+    #Swap two random cities in the tour.
     new_tour = tour.copy()
     i, j = np.random.choice(len(tour), 2, replace=False)
     new_tour[i], new_tour[j] = new_tour[j], new_tour[i]
@@ -32,7 +32,7 @@ def swap_mutation(tour):
 
 
 def get_local_best(swarm, fitnesses, index, neighborhood_size=2):
-    """Finds the best solution in a particle's local neighborhood."""
+    #Finds the best solution in a particle's local neighborhood.
     num_particles = len(swarm)
 
     # Define the ring neighborhood (circular list)
@@ -54,7 +54,7 @@ def run_tsp_pso(num_nodes, num_particles, w, c1, c2, v_max, max_iterations, topo
             else:
                 cost_matrix[i][j] = np.linalg.norm(cities[i] - cities[j])
 
-    # ✅ Soft bridge constraint
+    # Soft bridge constraint
     if bridge:
         a, b = bridge
         cost_matrix[a][b] = cost_matrix[b][a] = 1e-5  # near-zero cost
